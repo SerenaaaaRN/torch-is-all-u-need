@@ -7,7 +7,7 @@ def make_circle_data(n=500, seed=42):
     rng = np.random.default_rng(seed)
     points = rng.uniform(-2, 2, size=(n, 2))
     labels = (points[:, 0] ** 2 + points[:, 1] ** 2 < 1.5).astype(np.float64)
-    return list(zip(points, labels.reshape(-1, 1)))
+    return points, labels.reshape(-1, 1)
 
 
 def train():
@@ -26,10 +26,13 @@ def train():
     optimizer = Adam(model.parameters(), lr=0.01)
 
     data = make_circle_data(500)
-    split = int(len(data) * 0.8)
-    train_data = data[:split]
-    test_data = data[split:]
+    split = int(len(data[0]) * 0.8)
+    train_data = list(zip(data[0][:split], data[1][:split]))
+    test_inputs = data[0][split:]
+    test_targets = data[1][split:]
     loader = DataLoader(train_data, batch_size=16, shuffle=True)
+
+    history = {"loss": [], "accuracy": []}
 
     model.train()
     for epoch in range(100):
@@ -52,19 +55,19 @@ def train():
 
         avg_loss = total_loss / total_samples
         accuracy = total_correct / total_samples * 100
+        history["loss"].append(avg_loss)
+        history["accuracy"].append(accuracy)
         if epoch % 10 == 0 or epoch == 99:
             print(
                 f"Epoch {epoch:3d} | Loss: {avg_loss:.6f} | Train Accuracy: {accuracy:.1f}%"
             )
 
     model.eval()
-    test_inputs = np.stack([item[0] for item in test_data])
-    test_targets = np.stack([item[1] for item in test_data])
     pred = model(test_inputs)
     correct = int(((pred >= 0.5).astype(np.float64) == test_targets).sum())
-    test_accuracy = correct / len(test_data) * 100
-    print(f"\nTest Accuracy: {test_accuracy:.1f}% ({correct}/{len(test_data)})")
-    return model, test_accuracy
+    test_accuracy = correct / len(test_targets) * 100
+    print(f"\nTest Accuracy: {test_accuracy:.1f}% ({correct}/{len(test_targets)})")
+    return model, test_accuracy, history
 
 
 if __name__ == "__main__":

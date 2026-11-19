@@ -6,16 +6,16 @@ Implementasi mini-library deep learning (terinspirasi oleh PyTorch) untuk kebutu
 
 ## Fitur
 
-| Kategori | Komponen |
-|---|---|
-| Base | `Module`, `Parameter` |
-| Layer | `Linear`, `BatchNorm` |
-| Aktivasi | `ReLU`, `Sigmoid`, `Tanh`, `Softmax` |
-| Regularisasi | `Dropout` |
-| Container | `Sequential` |
-| Loss | `MSELoss`, `BCELoss`, `CrossEntropyLoss` |
-| Optimizer | `SGD` (momentum, weight decay), `Adam` (weight decay) |
-| Data | `DataLoader` (batch, shuffle, drop_last) |
+| Kategori     | Komponen                                              |
+| ------------ | ----------------------------------------------------- |
+| Base         | `Module`, `Parameter`                                 |
+| Layer        | `Linear`, `BatchNorm`                                 |
+| Aktivasi     | `ReLU`, `Sigmoid`, `Tanh`, `Softmax`                  |
+| Regularisasi | `Dropout`                                             |
+| Container    | `Sequential`                                          |
+| Loss         | `MSELoss`, `BCELoss`, `CrossEntropyLoss`              |
+| Optimizer    | `SGD` (momentum, weight decay), `Adam` (weight decay) |
+| Data         | `DataLoader` (batch, shuffle, drop_last)              |
 
 ## Instalasi
 
@@ -57,6 +57,21 @@ optimizer.step()
 
 Input selalu berbentuk `(batch, fitur)`. Untuk klasifikasi multi-kelas, pakai `CrossEntropyLoss` dengan output logits tanpa `Softmax`.
 
+## Hasil
+
+![Klasifikasi lingkaran](figures/circle.png)
+
+![Klasifikasi spiral 3 kelas](figures/spiral.png)
+
+![Klasifikasi XOR dengan MLP](figures/xor.png)
+
+Gambar dibuat ulang dengan:
+
+```bash
+uv sync --extra viz
+uv run python example/visualize.py
+```
+
 ## Struktur Project
 
 ```
@@ -70,18 +85,7 @@ tinytorch/
 example/
 ├── xor.py         # XOR dengan MLP
 ├── spiral.py      # 3 kelas spiral + BatchNorm + Dropout
-└── circle.py      # klasifikasi lingkaran 2D
+├── circle.py      # klasifikasi lingkaran 2D
+└── visualize.py   # loss + decision boundary untuk README
+figures/           # hasil visualize.py
 ```
-
-## Roadmap
-
-- [x] Training per-batch dengan gradien dirata-rata
-- [x] `CrossEntropyLoss` + `Softmax`
-- [ ] `Conv2D`, `MaxPool2D`, `Flatten`
-- [ ] Contoh MNIST MLP
-- [ ] Save/load model
-- [ ] Learning rate scheduler
-
-## Lisensi
-
-MIT. File `LICENSE` belum ditambahkan.

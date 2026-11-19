@@ -60,6 +60,8 @@ def train():
     optimizer = Adam(model.parameters(), lr=0.01)
     loader = DataLoader(train_data, batch_size=32, shuffle=True)
 
+    history = {"loss": [], "accuracy": []}
+
     model.train()
     for epoch in range(300):
         total_loss = 0.0
@@ -78,19 +80,21 @@ def train():
             total_correct += int((logits.argmax(axis=1) == batch_targets).sum())
             total_samples += len(batch_inputs)
 
+        avg_loss = total_loss / total_samples
+        accuracy = total_correct / total_samples * 100
+        history["loss"].append(avg_loss)
+        history["accuracy"].append(accuracy)
         if epoch % 50 == 0 or epoch == 299:
-            avg_loss = total_loss / total_samples
-            accuracy = total_correct / total_samples * 100
             print(
                 f"Epoch {epoch:3d} | Loss: {avg_loss:.6f} | Train Accuracy: {accuracy:.1f}%"
             )
 
     model.eval()
     predictions = model(test_inputs).argmax(axis=1)
-    accuracy = float((predictions == test_targets).mean()) * 100
+    test_accuracy = float((predictions == test_targets).mean()) * 100
     correct = int((predictions == test_targets).sum())
-    print(f"\nTest Accuracy: {accuracy:.1f}% ({correct}/{len(test_targets)})")
-    return model, accuracy
+    print(f"\nTest Accuracy: {test_accuracy:.1f}% ({correct}/{len(test_targets)})")
+    return model, test_accuracy, history
 
 
 if __name__ == "__main__":
