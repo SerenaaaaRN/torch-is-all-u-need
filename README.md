@@ -25,16 +25,12 @@ cd torch-is-all-u-need
 uv sync
 ```
 
-Jalankan demo klasifikasi lingkaran 2D:
+Jalankan contoh:
 
 ```bash
+uv run python example/xor.py
+uv run python example/spiral.py
 uv run python example/circle.py
-```
-
-Jalankan test:
-
-```bash
-uv run pytest
 ```
 
 ## Quick Start
@@ -72,17 +68,15 @@ tinytorch/
 ├── optim.py       # SGD, Adam
 └── data.py        # DataLoader
 example/
-└── circle.py      # demo klasifikasi lingkaran 2D
-tests/
-├── test_gradients.py
-└── test_training.py
+├── xor.py         # XOR dengan MLP
+├── spiral.py      # 3 kelas spiral + BatchNorm + Dropout
+└── circle.py      # klasifikasi lingkaran 2D
 ```
 
 ## Roadmap
 
 - [x] Training per-batch dengan gradien dirata-rata
 - [x] `CrossEntropyLoss` + `Softmax`
-- [x] Unit test gradient checking
 - [ ] `Conv2D`, `MaxPool2D`, `Flatten`
 - [ ] Contoh MNIST MLP
 - [ ] Save/load model
