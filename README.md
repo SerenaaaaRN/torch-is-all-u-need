@@ -1,21 +1,21 @@
 # TinyTorch
 
-Implementasi mini-library deep learning (terinspirasi oleh PyTorch) untuk kebutuhan Jaringan Syaraf Tiruan feedforward. Di dalamnya ada Linear, BatchNorm, ReLU, Sigmoid, Tanh, Dropout, Sequential, MSELoss, BCELoss, SGD, Adam, dan DataLoader. Forward pass dan backpropagation ditulis manual tanpa tensor dan tanpa autograd. Proyek ini dibangun sepenuhnya dari nol hanya menggunakan Python standar tanpa dependency eksternal apa pun.
+Implementasi mini-library deep learning (terinspirasi oleh PyTorch) untuk kebutuhan Jaringan Syaraf Tiruan feedforward. Di dalamnya ada Linear, BatchNorm, ReLU, Sigmoid, Tanh, Softmax, Dropout, Sequential, MSELoss, BCELoss, CrossEntropyLoss, SGD, Adam, dan DataLoader. Forward pass dan backpropagation ditulis manual di atas NumPy tanpa autograd. Bobot disimpan sebagai `Parameter` yang berisi array dan gradien.
 
-`Python 3.12+` · `zero dependencies`
+`Python 3.12+` · `NumPy` · `backprop manual`
 
 ## Fitur
 
 | Kategori | Komponen |
 |---|---|
+| Base | `Module`, `Parameter` |
 | Layer | `Linear`, `BatchNorm` |
-| Aktivasi | `ReLU`, `Sigmoid`, `Tanh` |
+| Aktivasi | `ReLU`, `Sigmoid`, `Tanh`, `Softmax` |
 | Regularisasi | `Dropout` |
 | Container | `Sequential` |
-| Loss | `MSELoss`, `BCELoss` |
-| Optimizer | `SGD`, `Adam` |
-| Data | `DataLoader` |
-| Base | `Module` |
+| Loss | `MSELoss`, `BCELoss`, `CrossEntropyLoss` |
+| Optimizer | `SGD` (momentum, weight decay), `Adam` (weight decay) |
+| Data | `DataLoader` (batch, shuffle, drop_last) |
 
 ## Instalasi
 
@@ -31,18 +31,27 @@ Jalankan demo klasifikasi lingkaran 2D:
 uv run python example/circle.py
 ```
 
+Jalankan test:
+
+```bash
+uv run pytest
+```
+
 ## Quick Start
 
 ```python
+import numpy as np
+
 from tinytorch import Adam, BCELoss, Linear, ReLU, Sequential, Sigmoid
 
 model = Sequential(Linear(2, 8), ReLU(), Linear(8, 1), Sigmoid())
 criterion = BCELoss()
 optimizer = Adam(model.parameters(), lr=0.01)
 
-x, t = [0.5, -0.2], [1.0]
+x = np.array([[0.5, -0.2]])   # (batch, fitur)
+t = np.array([[1.0]])         # (batch, 1)
 
-pred = model.forward(x)
+pred = model(x)
 loss = criterion(pred, t)
 
 optimizer.zero_grad()
@@ -50,27 +59,34 @@ model.backward(criterion.backward())
 optimizer.step()
 ```
 
-`parameters()` mengembalikan referensi ke bobot dan gradien, sehingga optimizer memperbarui bobot secara in-place.
+Input selalu berbentuk `(batch, fitur)`. Untuk klasifikasi multi-kelas, pakai `CrossEntropyLoss` dengan output logits tanpa `Softmax`.
 
 ## Struktur Project
 
 ```
 tinytorch/
+├── parameter.py   # Parameter: data + grad
 ├── module.py      # base class Module
 ├── nn/            # Linear, aktivasi, Dropout, BatchNorm, Sequential
-├── loss.py        # MSELoss, BCELoss
+├── loss.py        # MSELoss, BCELoss, CrossEntropyLoss
 ├── optim.py       # SGD, Adam
 └── data.py        # DataLoader
 example/
 └── circle.py      # demo klasifikasi lingkaran 2D
+tests/
+├── test_gradients.py
+└── test_training.py
 ```
 
 ## Roadmap
 
+- [x] Training per-batch dengan gradien dirata-rata
+- [x] `CrossEntropyLoss` + `Softmax`
+- [x] Unit test gradient checking
 - [ ] `Conv2D`, `MaxPool2D`, `Flatten`
-- [ ] Training per-batch dengan gradien dirata-rata
-- [ ] Unit test
 - [ ] Contoh MNIST MLP
+- [ ] Save/load model
+- [ ] Learning rate scheduler
 
 ## Lisensi
 

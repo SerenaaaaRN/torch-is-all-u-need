@@ -1,46 +1,67 @@
-import math
+import numpy as np
 
 from tinytorch.module import Module
 
 
 class ReLU(Module):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self.mask = None
 
     def forward(self, x):
-        self.mask = [1.0 if v > 0 else 0.0 for v in x]
-        return [max(0.0, v) for v in x]
+        x = np.asarray(x, dtype=np.float64)
+        self.mask = x > 0
+        return np.where(self.mask, x, 0.0)
 
     def backward(self, grad):
-        return [g * m for g, m in zip(grad, self.mask)]
+        return grad * self.mask
 
 
 class Sigmoid(Module):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self.output = None
 
     def forward(self, x):
-        self.output = []
-        for v in x:
-            v = max(-500, min(500, v))
-            self.output.append(1.0 / (1.0 + math.exp(-v)))
-
-        return self.output
+        x = np.asarray(x, dtype=np.float64)
+        output = np.empty_like(x)
+        positive = x >= 0
+        output[positive] = 1.0 / (1.0 + np.exp(-x[positive]))
+        exp_x = np.exp(x[~positive])
+        output[~positive] = exp_x / (1.0 + exp_x)
+        self.output = output
+        return output
 
     def backward(self, grad):
-        return [g * o * (1 - o) for g, o in zip(grad, self.output)]
+        return grad * self.output * (1.0 - self.output)
 
 
 class Tanh(Module):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self.output = None
 
     def forward(self, x):
-        self.output = [math.tanh(v) for v in x]
+        self.output = np.tanh(np.asarray(x, dtype=np.float64))
         return self.output
 
     def backward(self, grad):
-        return [g * (1 - o * o) for g, o in zip(grad, self.output)]
+        return grad * (1.0 - self.output**2)
+
+
+class Softmax(Module):
+    def __init__(self, axis=-1):
+        super().__init__()
+        self.axis = axis
+        self.output = None
+
+    def forward(self, x):
+        x = np.asarray(x, dtype=np.float64)
+        shifted = x - x.max(axis=self.axis, keepdims=True)
+        exp = np.exp(shifted)
+        self.output = exp / exp.sum(axis=self.axis, keepdims=True)
+        return self.output
+
+    def backward(self, grad):
+        dot = (grad * self.output).sum(axis=self.axis, keepdims=True)
+        return self.output * (grad - dot)

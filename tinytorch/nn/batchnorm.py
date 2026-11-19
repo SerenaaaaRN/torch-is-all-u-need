@@ -1,91 +1,71 @@
-import math
+import numpy as np
 
 from tinytorch.module import Module
+from tinytorch.parameter import Parameter
 
 
 class BatchNorm(Module):
     def __init__(self, size, momentum=0.1, eps=1e-5):
         super().__init__()
         self.size = size
-        self.gamma = [1.0] * size
-        self.beta = [0.0] * size
-        self.gamma_grads = [0.0] * size
-        self.beta_grads = [0.0] * size
-        self.running_mean = [0.0] * size
-        self.running_var = [1.0] * size
+        self.gamma = Parameter(np.ones(size))
+        self.beta = Parameter(np.zeros(size))
+        self.running_mean = np.zeros(size)
+        self.running_var = np.ones(size)
         self.momentum = momentum
         self.eps = eps
-        self.x_norm = None
-        self.std_inv = None
-        self.batch_input = None
-
-    def forward_batch(self, batch):
-        batch_size = len(batch)
-        output_batch = []
-
-        if self.training:
-            mean = [0.0] * self.size
-            for sample in batch:
-                for j in range(self.size):
-                    mean[j] += sample[j]
-            mean = [m / batch_size for m in mean]
-
-            var = [0.0] * self.size
-            for sample in batch:
-                for j in range(self.size):
-                    var[j] += (sample[j] - mean[j]) ** 2
-            var = [v / batch_size for v in var]
-
-            self.std_inv = [1.0 / math.sqrt(v + self.eps) for v in var]
-
-            self.x_norm = []
-            self.batch_input = batch
-            for sample in batch:
-                normed = [
-                    (sample[j] - mean[j]) * self.std_inv[j] for j in range(self.size)
-                ]
-                self.x_norm.append(normed)
-                output = [
-                    self.gamma[j] * normed[j] + self.beta[j] for j in range(self.size)
-                ]
-                output_batch.append(output)
-
-            for j in range(self.size):
-                self.running_mean[j] = (1 - self.momentum) * self.running_mean[
-                    j
-                ] + self.momentum * mean[j]
-                self.running_var[j] = (1 - self.momentum) * self.running_var[
-                    j
-                ] + self.momentum * var[j]
-        else:
-            std_inv = [1.0 / math.sqrt(v + self.eps) for v in self.running_var]
-            for sample in batch:
-                normed = [
-                    (sample[j] - self.running_mean[j]) * std_inv[j]
-                    for j in range(self.size)
-                ]
-                output = [
-                    self.gamma[j] * normed[j] + self.beta[j] for j in range(self.size)
-                ]
-                output_batch.append(output)
-
-        return output_batch
+        self.x_hat = None
+        self.inv_std = None
+        self.batch_size = None
 
     def forward(self, x):
-        result = self.forward_batch([x])
-        return result[0]
+        x = np.asarray(x, dtype=np.float64)
+        if x.ndim != 2 or x.shape[1] != self.size:
+            raise ValueError(
+                f"BatchNorm({self.size}) menerima input shape (batch, {self.size}), "
+                f"dapat {x.shape}"
+            )
+
+        self.batch_size = x.shape[0]
+        if self.training:
+            mean = x.mean(axis=0)
+            var = x.var(axis=0)
+            inv_std = 1.0 / np.sqrt(var + self.eps)
+            x_hat = (x - mean) * inv_std
+
+            self.running_mean = (
+                1.0 - self.momentum
+            ) * self.running_mean + self.momentum * mean
+            self.running_var = (
+                1.0 - self.momentum
+            ) * self.running_var + self.momentum * var
+        else:
+            inv_std = 1.0 / np.sqrt(self.running_var + self.eps)
+            x_hat = (x - self.running_mean) * inv_std
+
+        self.x_hat = x_hat
+        self.inv_std = inv_std
+        return self.gamma.data * x_hat + self.beta.data
 
     def backward(self, grad):
-        if self.x_norm is None:
-            return grad
-        for j in range(self.size):
-            self.gamma_grads[j] += self.x_norm[0][j] * grad[j]
-            self.beta_grads[j] += grad[j]
-        return [grad[j] * self.gamma[j] * self.std_inv[j] for j in range(self.size)]
+        grad = np.asarray(grad, dtype=np.float64)
+        self.gamma.grad += (grad * self.x_hat).sum(axis=0)
+        self.beta.grad += grad.sum(axis=0)
+
+        if not self.training:
+            return grad * self.gamma.data * self.inv_std
+
+        n = self.batch_size
+        return (
+            self.gamma.data
+            * self.inv_std
+            / n
+            * (
+                n * grad
+                - grad.sum(axis=0)
+                - self.x_hat * (grad * self.x_hat).sum(axis=0)
+            )
+        )
 
     def parameters(self):
-        params = []
-        for j in range(self.size):
-            params.append((self.gamma, j, None, self.gamma_grads))
-            params.append((self.beta, j, None, self.beta_grads))
-        return params
+        return [self.gamma, self.beta]
