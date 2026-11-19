@@ -1,6 +1,5 @@
 import random
-
-from tinytorch import Module
+from tinytorch.module import Module
 
 
 class Dropout(Module):

@@ -1,6 +1,6 @@
 import math
 
-from tinytorch import Module
+from tinytorch.module import Module
 
 
 class ReLU(Module):

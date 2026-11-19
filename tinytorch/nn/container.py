@@ -19,7 +19,7 @@ class Sequential(Module):
     def parameters(self):
         params = []
         for module in self.modules:
-            params.extend(module.parametes())
+            params.extend(module.parameters())
 
         return params
 
