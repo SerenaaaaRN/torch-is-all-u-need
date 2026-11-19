@@ -1,21 +1,17 @@
-import random
+import numpy as np
 
 from tinytorch import Adam, BCELoss, DataLoader, Linear, ReLU, Sequential, Sigmoid
 
 
 def make_circle_data(n=500, seed=42):
-    random.seed(seed)
-    data = []
-    for _ in range(n):
-        x = random.uniform(-2, 2)
-        y = random.uniform(-2, 2)
-        label = 1.0 if x * x + y * y < 1.5 else 0.0
-        data.append(([x, y], [label]))
-    return data
+    rng = np.random.default_rng(seed)
+    points = rng.uniform(-2, 2, size=(n, 2))
+    labels = (points[:, 0] ** 2 + points[:, 1] ** 2 < 1.5).astype(np.float64)
+    return list(zip(points, labels.reshape(-1, 1)))
 
 
 def train():
-    random.seed(42)
+    np.random.seed(42)
     model = Sequential(
         Linear(2, 16),
         ReLU(),
@@ -28,6 +24,7 @@ def train():
     )
     criterion = BCELoss()
     optimizer = Adam(model.parameters(), lr=0.01)
+
     data = make_circle_data(500)
     split = int(len(data) * 0.8)
     train_data = data[:split]
@@ -36,24 +33,23 @@ def train():
 
     model.train()
     for epoch in range(100):
-        total_loss = 0
+        total_loss = 0.0
         total_correct = 0
         total_samples = 0
         for batch_inputs, batch_targets in loader:
-            batch_loss = 0
-            for x, t in zip(batch_inputs, batch_targets):
-                pred = model.forward(x)
-                loss = criterion(pred, t)
-                batch_loss += loss
-                optimizer.zero_grad()
-                grad = criterion.backward()
-                model.backward(grad)
-                optimizer.step()
-                predicted_class = 1.0 if pred[0] >= 0.5 else 0.0
-                if predicted_class == t[0]:
-                    total_correct += 1
-                total_samples += 1
-            total_loss += batch_loss
+            pred = model(batch_inputs)
+            loss = criterion(pred, batch_targets)
+
+            optimizer.zero_grad()
+            model.backward(criterion.backward())
+            optimizer.step()
+
+            total_loss += loss * len(batch_inputs)
+            total_correct += int(
+                ((pred >= 0.5).astype(np.float64) == batch_targets).sum()
+            )
+            total_samples += len(batch_inputs)
+
         avg_loss = total_loss / total_samples
         accuracy = total_correct / total_samples * 100
         if epoch % 10 == 0 or epoch == 99:
@@ -62,12 +58,10 @@ def train():
             )
 
     model.eval()
-    correct = 0
-    for x, t in test_data:
-        pred = model.forward(x)
-        predicted_class = 1.0 if pred[0] >= 0.5 else 0.0
-        if predicted_class == t[0]:
-            correct += 1
+    test_inputs = np.stack([item[0] for item in test_data])
+    test_targets = np.stack([item[1] for item in test_data])
+    pred = model(test_inputs)
+    correct = int(((pred >= 0.5).astype(np.float64) == test_targets).sum())
     test_accuracy = correct / len(test_data) * 100
     print(f"\nTest Accuracy: {test_accuracy:.1f}% ({correct}/{len(test_data)})")
     return model, test_accuracy

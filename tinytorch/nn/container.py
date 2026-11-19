@@ -2,13 +2,13 @@ from tinytorch.module import Module
 
 
 class Sequential(Module):
-    def __init__(self, *modules) -> None:
+    def __init__(self, *modules):
         super().__init__()
         self.modules = modules
 
     def forward(self, x):
         for module in self.modules:
-            x = module.forward(x)
+            x = module(x)
         return x
 
     def backward(self, grad):
@@ -20,15 +20,7 @@ class Sequential(Module):
         params = []
         for module in self.modules:
             params.extend(module.parameters())
-
         return params
 
-    def train(self):
-        self.training = True
-        for module in self.modules:
-            module.train()
-
-    def eval(self):
-        self.training = False
-        for module in self.modules:
-            module.eval()
+    def children(self):
+        return list(self.modules)
